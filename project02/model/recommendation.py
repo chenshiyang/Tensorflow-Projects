@@ -222,7 +222,7 @@ def recommend_other_favorite_movie(movie_id, top_k=5):
         for user in favorite_users_id:
             movies = recommend_your_favorite_movie(user, top_k=2)
             results.extend(movies)
-        # print('喜欢这个电影的人还喜欢：', results)
+        print('喜欢这个电影的人还喜欢：', results)
         return results
 
 

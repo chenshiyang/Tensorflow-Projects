@@ -72,22 +72,24 @@ def get_user_feature_layer(
     '''
     with tf.name_scope('user_fc'):
         # 对每个输入的feature embedding vector连入一个小型的NN，用以更新embedding
-        uid_fc_layer = tf.layers.dense(
+        uid_fc_layer = tf.layers.dense( #null * 1 * 64
             uid_embed_layer, embed_dim, name='uid_fc_layer', activation=tf.nn.relu)
-        gender_fc_layer = tf.layers.dense(
+        gender_fc_layer = tf.layers.dense( #null * 1 * 64
             gender_embed_layer, embed_dim, name='gender_fc_layer', activation=tf.nn.relu)
-        age_fc_layer = tf.layers.dense(
+        age_fc_layer = tf.layers.dense( #null * 1 * 64
             age_embed_layer, embed_dim, name='age_fc_layer', activation=tf.nn.relu)
-        job_fc_layer = tf.layers.dense(
+        job_fc_layer = tf.layers.dense( #null * 1 * 64
             job_embed_layer, embed_dim, name='job_fc_layer', activation=tf.nn.relu)
 
         # 将每个小型神经网络的输出进行全连接，然后对拼接后的vector再进行一次全连接
         user_combine_layer = tf.concat([
-            uid_fc_layer, gender_fc_layer, age_fc_layer, job_fc_layer], 2)  # (?, 1, 4*embed_dim)
+            uid_fc_layer, gender_fc_layer, age_fc_layer, job_fc_layer], 2)  # (?, 1, 4*embed_dim(256))
+        print("user_combine_layer.shape:", user_combine_layer.get_shape())
         user_combine_layer = tf.contrib.layers.fully_connected(
             user_combine_layer, user_feature_size, tf.nn.relu)  # (?, 1, 4*embed_dim) -->(?,1 , 512)
+        print("user_combine_layer.shape:", user_combine_layer.get_shape())
         user_combine_layer_flat = tf.reshape(user_combine_layer, [-1, user_feature_size])
-        print(user_combine_layer_flat.get_shape())  # (?, 512)
+        print("user_combine_layer_flat.shape", user_combine_layer_flat.get_shape())  # (?, 512)
     return user_combine_layer, user_combine_layer_flat
 
 

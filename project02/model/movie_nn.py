@@ -44,9 +44,9 @@ def get_movie_id_embed_layer(movie_id):
     获取movie id 的embedding
     '''
     with tf.name_scope('movie_embedding'):
-        movie_id_embed_matrix = tf.Variable(tf.random_uniform([
+        movie_id_embed_matrix = tf.Variable(tf.random_uniform([ #(?,64)
             movie_id_max, embed_dim], -1, 1), name='movie_id_embed_matrix')
-        movie_id_embed_layer = tf.nn.embedding_lookup(
+        movie_id_embed_layer = tf.nn.embedding_lookup( #(?,1,64)
             movie_id_embed_matrix, movie_id, name='movie_id_embed_layer')
     return movie_id_embed_layer
 
@@ -80,26 +80,28 @@ def get_movie_cnn_layer(movie_titles, dropout_keep_prob, window_sizes=[3, 4, 5, 
         movie_title_embed_matrix = tf.Variable(tf.random_uniform([
             title_vocb_num, embed_dim], -1, 1),
             name='movie_title_embed_matrix')
-        movie_title_embed_layer = tf.nn.embedding_lookup(
+        movie_title_embed_layer = tf.nn.embedding_lookup( # (?, 16, 64)
             movie_title_embed_matrix, movie_titles, name='movie_title_embed_layer')
         movie_title_embed_layer_expand = tf.expand_dims(movie_title_embed_layer, -1)  # title的二维representation矩阵
+        print("movie_title_embed_layer_expand.shape:", movie_title_embed_layer_expand.get_shape()) #(?,16,64,1)
 
     # 对文本嵌入层使用不同尺寸的卷积核做卷积和最大池化
     pool_layer_lst = []
     for window_size in window_sizes:
         with tf.name_scope('movie_txt_conv_maxpool_{}'.format(window_size)):
             filter_weights = tf.Variable(tf.truncated_normal([
-                window_size, embed_dim, 1, filter_num], stddev=0.1), name='filter_weights')  # 修改卷积核大小
+                window_size, embed_dim, 1, filter_num], stddev=0.1), name='filter_weights')  # 修改卷积核大小 window_size * embed_dim
             filter_bias = tf.Variable(tf.constant(0.1, shape=[filter_num], name='filter_bias'))
 
-            conv_layer = tf.nn.conv2d(movie_title_embed_layer_expand,
+            conv_layer = tf.nn.conv2d(movie_title_embed_layer_expand,#(?, 14, 1, 8) (?, 13, 1, 8)(?, 12, 1, 8)(?, 11, 1, 8)
                                       filter_weights, [1, 1, 1, 1], padding='VALID', name='conv_layer')
+            print("conv_layer.shape:", conv_layer.get_shape()) #(?, 14, 1, 8)
             relu_layer = tf.nn.relu(tf.nn.bias_add(conv_layer, filter_bias), name='relu_layer')
 
-            maxpool_layer = tf.nn.max_pool(relu_layer,
-                                           [1, title_length - window_size, 1, 1],
+            maxpool_layer = tf.nn.max_pool(relu_layer,   # maxpool_layer.shape: 4个都为(?, 2, 1, 8)
+                                           [1, title_length - window_size, 1, 1],  #池化窗口大小为 title_length-window_size, 1
                                            [1, 1, 1, 1], padding='VALID', name='maxpool_layer')
-
+            print("maxpool_layer.shape:", maxpool_layer.get_shape())
             pool_layer_lst.append(maxpool_layer)
 
     # dropout layer
@@ -125,17 +127,19 @@ def get_movie_feature_layer(
         # 首先将movie的id和genres分别连入一个小型神经网络
         movie_id_fc_layer = tf.layers.dense(movie_id_embed_layer,
                                             embed_dim, name='movie_id_fc_layer', activation=tf.nn.relu)
+        print("movie_id_fc_layer:", movie_id_fc_layer.get_shape()) #(?,1,64)
         movie_categories_fc_layer = tf.layers.dense(movie_categories_embed_layer,
                                                     embed_dim, name='movie_categories_fc_layer', activation=tf.nn.relu)
-
+        print("movie_categories_fc_layer.shape:", movie_categories_fc_layer.get_shape()) #(?,1,64)
         # 将id和genres的神经网络输出和经过cnn、dropout的titile feature拼接到一起，组成movie的representation
         movie_combine_layer = tf.concat([
             movie_id_fc_layer, movie_categories_fc_layer, dropout_layer], 2)  # (?,1,96)
         movie_combine_layer = tf.contrib.layers.fully_connected(
             movie_combine_layer, 512, tf.tanh)  # (?,1,200)
+        print("movie_combine_layer.shape:", movie_combine_layer.get_shape()) #(?,1,512)
         movie_combine_layer_flat = tf.reshape(movie_combine_layer, [-1, 512])
 
-        print(movie_combine_layer_flat.get_shape())
+        print("movie_combine_layer_flat.shape:", movie_combine_layer_flat.get_shape())#(?,512)
     return movie_combine_layer, movie_combine_layer_flat
 
 
