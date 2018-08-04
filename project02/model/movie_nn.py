@@ -119,6 +119,7 @@ def get_movie_feature_layer(
     '''
     将movie id，movie genres， movie title的representations分别连入一个小型的神经网络
     然后将每个神经网络的输出拼接在一起，组成movie feature representation
+    每个电影样本用一个长度为512的特征向量来表示
     '''
     # print(movie_id_embed_layer.get_shape())   (? 1 64)
     # print(movie_categories_embed_layer.get_shape())同上
